@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18.2-alpine
+        env:
+          POSTGRES_USER: streamer
+          POSTGRES_PASSWORD: streamer
+          POSTGRES_DB: streamer
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U streamer"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: valkey/valkey:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://streamer:streamer@localhost:5432/streamer
+      REDIS_URL: redis://localhost:6379
+      BETTER_AUTH_SECRET: ci-secret-at-least-32-characters-long!!
+      BETTER_AUTH_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      TWITCH_CLIENT_ID: ci
+      TWITCH_CLIENT_SECRET: ci
+      TWITCH_EVENTSUB_SECRET: ci-eventsub-secret
+      S3_ENDPOINT: http://localhost:9000
+      S3_REGION: ru-central1
+      S3_BUCKET: streamer-media
+      S3_ACCESS_KEY_ID: ci
+      S3_SECRET_ACCESS_KEY: ci
+      S3_PUBLIC_URL: http://localhost:9000/streamer-media
+      CENTRIFUGO_API_URL: http://localhost:8000/api
+      CENTRIFUGO_API_KEY: ci
+      CENTRIFUGO_TOKEN_HMAC_SECRET: ci
+      NEXT_PUBLIC_CENTRIFUGO_WS_URL: ws://localhost:8000/connection/websocket
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npx biome check --error-on-warnings
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Migrations
+        run: npm run db:migrate
+
+      - name: Tests
+        run: npx vitest run --passWithNoTests
+
+      - name: Build
+        run: npm run build

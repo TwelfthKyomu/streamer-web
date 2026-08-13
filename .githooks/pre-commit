@@ -1,0 +1,43 @@
+#!/bin/sh
+set -e
+
+if [ -n "$SKIP_HOOKS" ]; then
+  echo "pre-commit: пропущено (SKIP_HOOKS)"
+  exit 0
+fi
+
+PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.volta/bin:$PATH"
+
+if [ -s "$HOME/.nvm/nvm.sh" ]; then
+  . "$HOME/.nvm/nvm.sh" --no-use >/dev/null 2>&1 || true
+  nvm use --silent >/dev/null 2>&1 || true
+fi
+
+if command -v fnm >/dev/null 2>&1; then
+  eval "$(fnm env)" >/dev/null 2>&1 || true
+fi
+
+export PATH
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-commit: node не найден." >&2
+  echo "PATH=$PATH" >&2
+  echo "Допишите путь к node в .githooks/pre-commit либо коммитьте из терминала." >&2
+  exit 1
+fi
+
+GIT_DIR_PATH=$(git rev-parse --git-dir)
+if [ -d "$GIT_DIR_PATH/rebase-merge" ] ||
+  [ -d "$GIT_DIR_PATH/rebase-apply" ] ||
+  [ -f "$GIT_DIR_PATH/MERGE_HEAD" ]; then
+  echo "pre-commit: rebase/merge — проверки пропущены"
+  exit 0
+fi
+
+echo "→ biome"
+npx --no-install biome check --error-on-warnings
+
+echo "→ types"
+npm run --silent typecheck
+
+echo "✓ проверки пройдены"
