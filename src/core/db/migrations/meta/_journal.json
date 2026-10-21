@@ -8,6 +8,13 @@
       "when": 1786619159662,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792564245934,
+      "tag": "0001_media_jobs",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,11 @@
+version: "2"
+sql:
+  # Схема не дублируется: sqlc читает те же миграции drizzle, что применяет сайт.
+  - engine: postgresql
+    schema: ../src/core/db/migrations
+    queries: internal/jobs/queries.sql
+    gen:
+      go:
+        package: queries
+        out: internal/jobs/queries
+        sql_package: pgx/v5

@@ -1,6 +1,7 @@
 export * from "./achievements";
 export * from "./auth";
 export * from "./content";
+export * from "./jobs";
 export * from "./moderation";
 export * from "./points";
 export * from "./profiles";
