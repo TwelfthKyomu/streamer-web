@@ -8,8 +8,11 @@ services:
       POSTGRES_USER: streamer
       POSTGRES_PASSWORD: streamer
       POSTGRES_DB: streamer
+    # Наружу 5433, а не 5432: стандартный порт часто занят локально
+    # установленным Postgres, и тогда приложение молча уходит в него,
+    # а не в контейнер — миграции и данные оказываются в разных серверах.
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       # Postgres 18+ требует монтировать именно /var/lib/postgresql:
       # данные лежат в подкаталоге с номером мажорной версии, что позволяет
@@ -26,8 +29,9 @@ services:
     restart: unless-stopped
     # BullMQ требует noeviction: иначе Redis может выбросить задачи очереди
     command: [ "valkey-server", "--maxmemory-policy", "noeviction", "--appendonly", "yes" ]
+    # Наружу 6380 по той же причине, что и у postgres выше
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     healthcheck:

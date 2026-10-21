@@ -6,6 +6,10 @@ const secret = new TextEncoder().encode(env.CENTRIFUGO_TOKEN_HMAC_SECRET);
 export const channels = {
   overlay: (streamerUserId: string) => `overlay:${streamerUserId}`,
   feed: () => "feed:global",
+  stream: () => "stream:status",
+  // Сюда публикует ffmpeg-воркер из worker/: { type: "media.processed",
+  // mediaId, status: "ready" | "failed" }. Канал личный — подписка по токену.
+  media: (ownerUserId: string) => `media:${ownerUserId}`,
 } as const;
 
 export async function createConnectionToken(

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useOptimistic, useTransition } from "react";
 import { toast } from "sonner";
 import { likeAction } from "@/app/_actions/feed";
+import { VideoPlayer } from "@/app/_components/video-player";
 import type { FeedPost } from "@/modules/feed";
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui/avatar";
 import { Card } from "@/ui/card";
@@ -68,13 +69,13 @@ export function PostCard({
   };
 
   return (
-    <Card className="overflow-hidden p-0">
-      <div className="flex items-center gap-3 p-4">
-        <Avatar className="size-8">
+    <Card className="overflow-hidden p-0 transition-colors hover:border-primary/40">
+      <div className="flex items-center gap-3 border-border/60 border-b p-3">
+        <Avatar className="size-8 rounded-sm">
           {post.author.avatarUrl ? (
             <AvatarImage src={post.author.avatarUrl} alt="" />
           ) : null}
-          <AvatarFallback>
+          <AvatarFallback className="rounded-sm font-mono text-xs">
             {post.author.displayName.slice(0, 2).toUpperCase()}
           </AvatarFallback>
         </Avatar>
@@ -82,14 +83,15 @@ export function PostCard({
         <div className="min-w-0 flex-1">
           <Link
             href={`/u/${post.author.id}`}
-            className="truncate font-medium text-sm hover:underline"
+            className="truncate font-medium text-sm decoration-primary underline-offset-4 hover:underline"
           >
             {post.author.displayName}
           </Link>
-          <p className="text-muted-foreground text-xs">
-            {timeAgo(post.publishedAt)}
-          </p>
         </div>
+
+        <span className="label shrink-0 text-muted-foreground">
+          {timeAgo(post.publishedAt)}
+        </span>
       </div>
 
       {post.caption ? (
@@ -98,16 +100,12 @@ export function PostCard({
 
       <div className="bg-muted/40">
         {post.media.kind === "video" ? (
-          <video
+          <VideoPlayer
+            hls={post.media.hls}
             src={post.media.url}
-            poster={post.media.poster ?? undefined}
-            controls
-            playsInline
-            preload="none"
+            poster={post.media.poster}
             className="max-h-[32rem] w-full object-contain"
-          >
-            <track kind="captions" />
-          </video>
+          />
         ) : (
           <img
             src={post.media.url}
@@ -118,14 +116,14 @@ export function PostCard({
         )}
       </div>
 
-      <div className="flex items-center gap-1 p-2">
+      <div className="flex items-center gap-1 border-border/60 border-t p-2">
         <button
           type="button"
           onClick={handleLike}
           disabled={pending}
           aria-pressed={optimistic.liked}
           className={cn(
-            "inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent disabled:opacity-60",
+            "inline-flex items-center gap-2 rounded-sm px-3 py-2 font-mono text-sm transition-colors hover:bg-accent disabled:opacity-60",
             optimistic.liked ? "text-primary" : "text-muted-foreground",
           )}
         >
@@ -135,7 +133,7 @@ export function PostCard({
           <span className="tabular-nums">{optimistic.count}</span>
         </button>
 
-        <span className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-muted-foreground text-sm">
+        <span className="inline-flex items-center gap-2 rounded-sm px-3 py-2 font-mono text-muted-foreground text-sm">
           <MessageCircleIcon className="size-4" />
           <span className="tabular-nums">{post.commentCount}</span>
         </span>

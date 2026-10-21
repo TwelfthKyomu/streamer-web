@@ -27,6 +27,18 @@
         "history_size": 50,
         "history_ttl": "600s",
         "allow_subscribe_for_client": true
+      },
+      {
+        "name": "stream",
+        "history_size": 1,
+        "history_ttl": "3600s",
+        "allow_subscribe_for_client": true
+      },
+      {
+        "name": "media",
+        "history_size": 10,
+        "history_ttl": "600s",
+        "allow_subscribe_for_client": false
       }
     ]
   }

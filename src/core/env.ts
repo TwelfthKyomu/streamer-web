@@ -12,6 +12,10 @@ export const env = createEnv({
     TWITCH_CLIENT_ID: z.string().min(1),
     TWITCH_CLIENT_SECRET: z.string().min(1),
     TWITCH_EVENTSUB_SECRET: z.string().min(10).max(100),
+    // Публичный адрес вебхука. Локально приложение живёт на localhost, куда
+    // Twitch достучаться не может, поэтому при работе через туннель адрес
+    // задаётся явно. Если не задан — собирается из NEXT_PUBLIC_APP_URL.
+    TWITCH_EVENTSUB_CALLBACK_URL: z.url().optional(),
 
     TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
     VK_CLIENT_ID: z.string().optional(),

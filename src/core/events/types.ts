@@ -1,5 +1,6 @@
 export type DomainEvents = {
   "user.registered": { userId: string };
+  "user.visit": { userId: string };
 
   "post.created": { postId: string; authorId: string };
   "post.approved": { postId: string; authorId: string; moderatorId: string };

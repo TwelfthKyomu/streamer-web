@@ -9,7 +9,12 @@ export type PendingPost = {
   caption: string | null;
   createdAt: Date;
   author: { id: string; displayName: string; avatarUrl: string | null };
-  media: { kind: "image" | "video"; url: string; poster: string | null };
+  media: {
+    kind: "image" | "video";
+    url: string;
+    hls: string | null;
+    poster: string | null;
+  };
 };
 
 export async function pendingCount(): Promise<number> {
@@ -54,6 +59,7 @@ export async function listPending(limit = 50): Promise<PendingPost[]> {
       url: row.mediaVariants.mp4_720
         ? publicUrl(row.mediaVariants.mp4_720)
         : publicUrl(row.mediaKey),
+      hls: row.mediaVariants.hls ? publicUrl(row.mediaVariants.hls) : null,
       poster: row.mediaVariants.poster
         ? publicUrl(row.mediaVariants.poster)
         : null,

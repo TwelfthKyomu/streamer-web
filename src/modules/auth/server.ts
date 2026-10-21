@@ -1,11 +1,18 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/core/db/client";
 import * as schema from "@/core/db/schema";
 import { env } from "@/core/env";
 import { emit } from "@/core/events/bus";
 import { logger } from "@/core/logger";
+import {
+  fetchUserById,
+  getAppToken,
+  getBroadcasterId,
+  linkAccount,
+} from "@/modules/twitch";
 
 const socialProviders = {
   twitch: {
@@ -39,6 +46,47 @@ export const auth = betterAuth({
   },
 
   databaseHooks: {
+    session: {
+      create: {
+        after: async (session) => {
+          // Связка вешается на создание сессии, а не аккаунта: аккаунт
+          // создаётся один раз, и пользователи, вошедшие раньше, иначе
+          // остались бы без twitch_links навсегда.
+          try {
+            if (await getBroadcasterId(session.userId)) return;
+
+            const twitchAccount = await db.query.account.findFirst({
+              where: and(
+                eq(schema.account.userId, session.userId),
+                eq(schema.account.providerId, "twitch"),
+              ),
+            });
+
+            if (!twitchAccount) return;
+
+            const token = await getAppToken();
+            const profile = await fetchUserById(token, twitchAccount.accountId);
+
+            await linkAccount({
+              userId: session.userId,
+              twitchUserId: twitchAccount.accountId,
+              login: profile?.login ?? twitchAccount.accountId,
+            });
+
+            logger.info(
+              { userId: session.userId },
+              "аккаунт Twitch связан с профилем",
+            );
+          } catch (error) {
+            logger.error(
+              { err: error, userId: session.userId },
+              "не удалось связать аккаунт Twitch",
+            );
+          }
+        },
+      },
+    },
+
     user: {
       create: {
         after: async (createdUser) => {

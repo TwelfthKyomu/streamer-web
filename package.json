@@ -20,6 +20,9 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx --env-file=.env src/core/db/seed.ts",
+    "twitch:subs": "tsx --env-file=.env scripts/twitch-subscriptions.ts",
+    "worker:dev": "cd worker && go run ./cmd/media-worker -env ../.env",
+    "worker:test": "cd worker && go test ./...",
     "prepare": "git config core.hooksPath .githooks || true"
   },
   "dependencies": {

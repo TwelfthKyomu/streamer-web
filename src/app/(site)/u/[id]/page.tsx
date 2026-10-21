@@ -3,8 +3,9 @@ import { CoinsIcon, ImageIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/core/db/client";
-import { profiles, userAchievements } from "@/core/db/schema";
+import { profiles } from "@/core/db/schema";
 import { publicUrl } from "@/core/storage/s3";
+import { listForUser } from "@/modules/achievements";
 import { listByAuthor } from "@/modules/feed";
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui/avatar";
 import { Badge } from "@/ui/badge";
@@ -42,9 +43,7 @@ export default async function ProfilePage({ params }: PageProps<"/u/[id]">) {
   if (!profile) notFound();
 
   const [badges, authored] = await Promise.all([
-    db.query.userAchievements.findMany({
-      where: eq(userAchievements.userId, id),
-    }),
+    listForUser(id),
     listByAuthor(id),
   ]);
 
@@ -90,8 +89,14 @@ export default async function ProfilePage({ params }: PageProps<"/u/[id]">) {
           <h2 className="font-semibold text-lg">Достижения</h2>
           <div className="flex flex-wrap gap-2">
             {badges.map((badge) => (
-              <Badge key={badge.achievementCode} variant="secondary">
-                {badge.achievementCode}
+              <Badge
+                key={badge.code}
+                variant="secondary"
+                className="gap-1.5 py-1"
+                title={`${badge.description} · открыто ${badge.unlockedAt.toLocaleDateString("ru-RU")}`}
+              >
+                <span aria-hidden>{badge.icon}</span>
+                {badge.title}
               </Badge>
             ))}
           </div>

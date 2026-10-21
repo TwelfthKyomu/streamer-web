@@ -4,6 +4,7 @@ import { CheckIcon, XIcon } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { decideAction } from "@/app/_actions/moderation";
+import { VideoPlayer } from "@/app/_components/video-player";
 import type { PendingPost } from "@/modules/moderation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/ui/avatar";
 import { Button } from "@/ui/button";
@@ -72,16 +73,12 @@ export function ReviewQueue({ initial }: { initial: PendingPost[] }) {
 
           <div className="bg-muted/40">
             {post.media.kind === "video" ? (
-              <video
+              <VideoPlayer
+                hls={post.media.hls}
                 src={post.media.url}
-                poster={post.media.poster ?? undefined}
-                controls
-                playsInline
-                preload="metadata"
+                poster={post.media.poster}
                 className="max-h-96 w-full object-contain"
-              >
-                <track kind="captions" />
-              </video>
+              />
             ) : (
               <img
                 src={post.media.url}

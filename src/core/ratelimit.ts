@@ -1,4 +1,5 @@
-import { RateLimiterRedis } from "rate-limiter-flexible";
+import { RateLimiterRedis, RateLimiterRes } from "rate-limiter-flexible";
+import { logger } from "@/core/logger";
 import { redis } from "@/core/redis";
 
 function limiter(keyPrefix: string, points: number, durationSeconds: number) {
@@ -28,25 +29,53 @@ export type RateLimitResult =
   | { allowed: true }
   | { allowed: false; retryAfterSeconds: number };
 
+/**
+ * BullMQ требует maxRetriesPerRequest: null, а с ним ioredis не отклоняет
+ * команды при недоступном Redis, а копит их в очереди — то есть проверка
+ * лимита не упадёт, а зависнет вместе с запросом пользователя. Поэтому
+ * ограничиваем ожидание сами.
+ */
+const limiterTimeoutMs = 1000;
+
+class LimiterTimeout extends Error {}
+
+function withTimeout<T>(promise: Promise<T>): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new LimiterTimeout("лимитер не ответил вовремя")),
+        limiterTimeoutMs,
+      ),
+    ),
+  ]);
+}
+
 export async function consume(
   name: RateLimiterName,
   key: string,
 ): Promise<RateLimitResult> {
   try {
-    await rateLimiters[name].consume(key);
+    await withTimeout(rateLimiters[name].consume(key));
     return { allowed: true };
   } catch (rejection) {
-    const msBeforeNext =
-      typeof rejection === "object" &&
-      rejection !== null &&
-      "msBeforeNext" in rejection &&
-      typeof rejection.msBeforeNext === "number"
-        ? rejection.msBeforeNext
-        : 60_000;
+    // Библиотека отвергает промис в двух совершенно разных случаях: лимит
+    // исчерпан (RateLimiterRes) и хранилище недоступно (Error). Раньше оба
+    // считались превышением, и при упавшем Redis пользователь видел
+    // "слишком много запросов" вместо честной ошибки — а заодно сайт
+    // блокировал сам себя целиком.
+    if (rejection instanceof RateLimiterRes) {
+      return {
+        allowed: false,
+        retryAfterSeconds: Math.ceil(rejection.msBeforeNext / 1000),
+      };
+    }
 
-    return {
-      allowed: false,
-      retryAfterSeconds: Math.ceil(msBeforeNext / 1000),
-    };
+    logger.error(
+      { err: rejection, limiter: name },
+      "лимитер недоступен, пропускаем запрос без ограничения",
+    );
+
+    return { allowed: true };
   }
 }

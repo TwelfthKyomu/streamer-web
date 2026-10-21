@@ -8,3 +8,4 @@ export {
   type SpendOutcome,
   spend,
 } from "./service";
+export { registerPointsSubscribers } from "./subscribers";

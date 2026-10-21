@@ -1,11 +1,20 @@
 import { count, eq, sql } from "drizzle-orm";
-import { ImagePlusIcon, RadioIcon, TrophyIcon, UsersIcon } from "lucide-react";
+import { ImagePlusIcon, TrophyIcon, UsersIcon } from "lucide-react";
 import Link from "next/link";
-import { PostCard } from "@/app/_components/post-card";
+import { FeedList } from "@/app/_components/feed-list";
+import { StreamBanner } from "@/app/_components/stream-banner";
 import { db } from "@/core/db/client";
 import { pointTransactions, posts, profiles } from "@/core/db/schema";
+import { env } from "@/core/env";
+import { newId } from "@/core/id";
+import {
+  channels,
+  createConnectionToken,
+  createSubscriptionToken,
+} from "@/core/realtime/centrifugo";
 import { getCurrentUser } from "@/modules/auth";
 import { listFeed } from "@/modules/feed";
+import { getStatus } from "@/modules/twitch";
 import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
 import {
@@ -37,46 +46,6 @@ async function getStats() {
   };
 }
 
-async function StreamBanner() {
-  const status = await db.query.streamStatus.findFirst();
-  const isLive = status?.isLive ?? false;
-
-  return (
-    <Card className="flex flex-col gap-4 border-primary/25 bg-gradient-to-br from-primary/12 via-primary/5 to-transparent p-6 sm:flex-row sm:items-center">
-      <div className="flex items-center gap-3">
-        <span className="relative flex size-3" aria-hidden>
-          {isLive ? (
-            <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" />
-          ) : null}
-          <span
-            className={`relative inline-flex size-3 rounded-full ${isLive ? "bg-primary" : "bg-muted-foreground/50"}`}
-          />
-        </span>
-
-        <div>
-          <p className="font-semibold">
-            {isLive ? "Стрим идёт прямо сейчас" : "Стрим офлайн"}
-          </p>
-          <p className="text-muted-foreground text-sm">
-            {isLive
-              ? (status?.title ?? "Без названия")
-              : "Загляните в ленту или загрузите свой мем"}
-          </p>
-        </div>
-      </div>
-
-      <Button
-        className="sm:ml-auto"
-        nativeButton={false}
-        render={<Link href="/soundboard" />}
-      >
-        <RadioIcon className="size-4" />
-        Соундборд
-      </Button>
-    </Card>
-  );
-}
-
 function StatTile({
   icon,
   value,
@@ -87,30 +56,45 @@ function StatTile({
   label: string;
 }) {
   return (
-    <Card className="flex flex-row items-center gap-3 p-4">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+    <Card className="flex flex-col gap-2 rounded-none border-border/60 p-4 transition-colors hover:border-primary/40">
+      <span className="flex items-center gap-2 text-muted-foreground">
         {icon}
+        <span className="label truncate">{label}</span>
       </span>
-      <div className="min-w-0">
-        <p className="font-semibold text-lg leading-none tabular-nums">
-          {value.toLocaleString("ru-RU")}
-        </p>
-        <p className="truncate text-muted-foreground text-xs">{label}</p>
-      </div>
+      <p className="font-bold font-mono text-2xl leading-none tabular-nums">
+        {value.toLocaleString("ru-RU")}
+      </p>
     </Card>
   );
 }
 
 export default async function HomePage() {
   const user = await getCurrentUser();
-  const [stats, feed] = await Promise.all([
+  const [stats, feed, streamStatus] = await Promise.all([
     getStats(),
     listFeed({ viewerId: user?.id, limit: 12 }),
+    getStatus(),
+  ]);
+
+  // Гостям тоже нужен статус эфира, поэтому подключение к Centrifugo
+  // подписывается на разовый идентификатор, а не на пользователя.
+  const streamChannel = channels.stream();
+  const clientId = user?.id ?? `visitor:${newId()}`;
+
+  const [connectionToken, subscriptionToken] = await Promise.all([
+    createConnectionToken(clientId),
+    createSubscriptionToken(streamChannel, clientId),
   ]);
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8">
-      <StreamBanner />
+      <StreamBanner
+        initial={streamStatus}
+        wsUrl={env.NEXT_PUBLIC_CENTRIFUGO_WS_URL}
+        channel={streamChannel}
+        connectionToken={connectionToken}
+        subscriptionToken={subscriptionToken}
+      />
 
       <div className="grid grid-cols-3 gap-3">
         <StatTile
@@ -130,11 +114,17 @@ export default async function HomePage() {
         />
       </div>
 
-      <div className="flex items-center justify-between">
-        <h1 className="font-bold text-2xl tracking-tight">Лента</h1>
+      <div className="flex items-end justify-between gap-4 border-border/60 border-b pb-3">
+        <div className="flex items-baseline gap-3">
+          <h1 className="font-bold text-2xl tracking-tight">Лента</h1>
+          <span className="label text-muted-foreground">
+            {feed.items.length.toString().padStart(2, "0")}
+          </span>
+        </div>
         {user ? (
           <Button
             variant="outline"
+            className="rounded-sm"
             nativeButton={false}
             render={<Link href="/upload" />}
           >
@@ -158,11 +148,11 @@ export default async function HomePage() {
           </EmptyHeader>
         </Empty>
       ) : (
-        <div className="flex flex-col gap-4">
-          {feed.items.map((post) => (
-            <PostCard key={post.id} post={post} canInteract={Boolean(user)} />
-          ))}
-        </div>
+        <FeedList
+          initialItems={feed.items}
+          initialCursor={feed.nextCursor}
+          canInteract={Boolean(user)}
+        />
       )}
     </div>
   );

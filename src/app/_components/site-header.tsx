@@ -4,27 +4,36 @@ import { SignInButton, UserMenu } from "@/app/_components/user-menu";
 import { getCurrentUser } from "@/modules/auth";
 
 const navigation = [
-  { href: "/", label: "Лента" },
-  { href: "/soundboard", label: "Соундборд" },
-  { href: "/leaderboard", label: "Рейтинг" },
+  { href: "/", label: "лента" },
+  { href: "/soundboard", label: "соундборд" },
+  { href: "/leaderboard", label: "рейтинг" },
 ] as const;
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4">
-        <Link href="/" className="font-bold text-lg tracking-tight">
-          <span className="text-primary">/</span>портал
+    <header className="sticky top-0 z-40 border-border/60 border-b bg-background/70 backdrop-blur-xl">
+      <div className="mx-auto flex h-14 max-w-6xl items-center gap-8 px-4">
+        <Link
+          href="/"
+          className="group flex items-center font-bold font-mono text-base tracking-tight"
+        >
+          <span className="text-primary transition-transform group-hover:-translate-x-0.5">
+            [
+          </span>
+          <span className="px-0.5">портал</span>
+          <span className="text-primary transition-transform group-hover:translate-x-0.5">
+            ]
+          </span>
         </Link>
 
-        <nav className="hidden items-center gap-1 sm:flex">
+        <nav className="hidden items-center gap-6 sm:flex">
           {navigation.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="rounded-md px-3 py-2 text-muted-foreground text-sm transition-colors hover:bg-accent hover:text-foreground"
+              className="label relative text-muted-foreground transition-colors after:absolute after:-bottom-1.5 after:left-0 after:h-px after:w-0 after:bg-primary after:transition-all hover:text-foreground hover:after:w-full"
             >
               {item.label}
             </Link>

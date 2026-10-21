@@ -1,6 +1,10 @@
 import { defineConfig } from "drizzle-kit";
 
-const databaseUrl = process.env.DATABASE_URL;
+// Миграции идут в обход пулера: PgBouncer в transaction mode не держит
+// сессионное состояние, а DDL на него полагается. Для локального Postgres
+// переменной просто нет, и берётся обычный DATABASE_URL.
+const databaseUrl =
+  process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL;
 
 if (!databaseUrl) {
   throw new Error(

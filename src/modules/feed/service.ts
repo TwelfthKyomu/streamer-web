@@ -20,6 +20,8 @@ export type FeedPost = {
   media: {
     kind: "image" | "video";
     url: string;
+    /** master.m3u8 от ffmpeg-воркера; пока видео не обработано — null. */
+    hls: string | null;
     poster: string | null;
     width: number | null;
     height: number | null;
@@ -95,7 +97,10 @@ export async function listFeed(params: {
       and(
         eq(posts.status, "approved"),
         cursor
-          ? sql`(${posts.publishedAt}, ${posts.id}) < (${cursor.publishedAt}, ${cursor.id})`
+          ? // Дату передаём строкой с явным приведением: в кортежном
+            // сравнении Postgres не может вывести тип параметра сам, а
+            // драйвер не умеет сериализовать Date в такой позиции.
+            sql`(${posts.publishedAt}, ${posts.id}) < (${cursor.publishedAt.toISOString()}::timestamptz, ${cursor.id})`
           : undefined,
       ),
     )
@@ -124,6 +129,7 @@ export async function listFeed(params: {
         url: row.mediaVariants.mp4_720
           ? publicUrl(row.mediaVariants.mp4_720)
           : publicUrl(row.mediaKey),
+        hls: row.mediaVariants.hls ? publicUrl(row.mediaVariants.hls) : null,
         poster: row.mediaVariants.poster
           ? publicUrl(row.mediaVariants.poster)
           : null,

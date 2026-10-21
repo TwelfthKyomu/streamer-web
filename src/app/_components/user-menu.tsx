@@ -12,6 +12,7 @@ import { Button } from "@/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -81,28 +82,32 @@ export function UserMenu({ user }: { user: CurrentUser }) {
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel className="truncate">
-            {user.displayName}
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
+          {/* Group обязателен: Base UI связывает GroupLabel с группой через
+              контекст и без обёртки бросает исключение при открытии меню. */}
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="truncate">
+              {user.displayName}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
 
-          <DropdownMenuItem
-            render={<Link href={`/u/${user.id}`} />}
-            className="gap-2"
-          >
-            <UserIcon className="size-4" />
-            Мой профиль
-          </DropdownMenuItem>
-
-          {isStaff ? (
             <DropdownMenuItem
-              render={<Link href="/moderation" />}
+              render={<Link href={`/u/${user.id}`} />}
               className="gap-2"
             >
-              <ShieldIcon className="size-4" />
-              Модерация
+              <UserIcon className="size-4" />
+              Мой профиль
             </DropdownMenuItem>
-          ) : null}
+
+            {isStaff ? (
+              <DropdownMenuItem
+                render={<Link href="/moderation" />}
+                className="gap-2"
+              >
+                <ShieldIcon className="size-4" />
+                Модерация
+              </DropdownMenuItem>
+            ) : null}
+          </DropdownMenuGroup>
 
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleSignOut} className="gap-2">
